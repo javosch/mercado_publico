@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Nov  2 13:46:03 2021
-
-@author: JavierSchmitt
-"""
 
 import requests
 import json
 import pandas as pd
 import time
-from datetime import date, timedelta
+from datetime import date
 from extract_codigo_organismo import ObtainCodeOrganization
 
 # =============================================================================
@@ -25,13 +20,10 @@ from extract_codigo_organismo import ObtainCodeOrganization
 #     Recepcion Conforme Incompleta = "15"
 # =============================================================================
 
-#organization_code = 111875 #cod armada
-
 
 def ObtainOrdenCompraCodigo(ticket, organization_code, start_date, end_date):
+
     """
-    
-    
     Parameters
     ----------
     ticket : String
@@ -49,6 +41,7 @@ def ObtainOrdenCompraCodigo(ticket, organization_code, start_date, end_date):
         Regresa una lista con los codigos correspondientes a las fechas ingresadas.
 
     """
+
     print('Obteniendo ordenes de compras para la/s fecha/s requeridas...')
     
     sdate = date.fromisoformat(start_date)
@@ -69,7 +62,10 @@ def ObtainOrdenCompraCodigo(ticket, organization_code, start_date, end_date):
     for url_code in urls_code:
         response_code_oc = requests.get(url_code)
         data_json = json.loads(response_code_oc.text)
-        codes_oc_json.append(data_json['Listado'])
+        try:
+            codes_oc_json.append(data_json['Listado'])
+        except KeyError:
+            print(data_json)
     
 #    if sdate != edate:
     codes_oc = pd.json_normalize(codes_oc_json[0])
@@ -80,15 +76,16 @@ def ObtainOrdenCompraCodigo(ticket, organization_code, start_date, end_date):
     return codes_oc
 
 
+def ObtainOrdenCompraDetails(ticket, codes_oc):
 
-def ObtainOrdenCompraDetails(codes_oc):
     """
-    
-
     Parameters
     ----------
     codes_oc : List
         Lista con los codigos a buscar para extraer la informacion.
+
+    ticket : String
+        Ticket para conectarse a la API de Mercado Publico.
 
     Returns
     -------
@@ -96,10 +93,10 @@ def ObtainOrdenCompraDetails(codes_oc):
         Regresa un DataFrame con toda la informacion de las OC.
     
     listado_data : DataFrame
-        Regresa un DataFrame con toda la informacion del listado de items
-        por OC.
+        Regresa un DataFrame con toda la informacion del listado de items por OC.
 
     """
+
     print('Obteniendo detalle de las ordenes de compra...')
     
     urls_oc = []
@@ -133,11 +130,9 @@ def ObtainOrdenCompraDetails(codes_oc):
     return data, listado_data
 
 
-
 def ObtainOC(ticket, organization, start_date, end_date):
-    """
-    
 
+    """
     Parameters
     ----------
     ticket : String
@@ -157,10 +152,10 @@ def ObtainOC(ticket, organization, start_date, end_date):
         por OC.
 
     """
+
     s_time = time.time()
     
-    organization_code, organization_name = ObtainCodeOrganization(ticket,
-                                                                  organization)
+    organization_code, organization_name = ObtainCodeOrganization(ticket, organization)
     i = 0
     if len(organization_code) != 1:
         print(dict(zip(organization_code, organization_name)))
@@ -171,7 +166,7 @@ def ObtainOC(ticket, organization, start_date, end_date):
                                        start_date,
                                        end_date)
     
-    data, listado_data = ObtainOrdenCompraDetails(codes_oc)
+    data, listado_data = ObtainOrdenCompraDetails(ticket, codes_oc)
     
     elapsed_time = time.time() - s_time
     
@@ -181,10 +176,3 @@ def ObtainOC(ticket, organization, start_date, end_date):
     print('Trabajo terminado en {:02d}:{:02d}:{:02d}'.format(int(h), int(m), int(s)))
     
     return data, listado_data
-
-ticket = '961C67F0-9FC9-4B63-97EC-69AC6BF0F6F8'
-organization = 'Armada'
-start_date = '2021-03-01'
-end_date = '2021-03-01'
-
-#data, listado_data = ObtainOC(ticket, organization, start_date, end_date)
